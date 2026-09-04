@@ -1,4 +1,4 @@
 class Product < ApplicationRecord
-    validetes :name,presence: true, uniqueness: true
-    validetes :price,presence: true
+    validates :name,presence: true, uniqueness: true
+    validates :price,presence: true
 end

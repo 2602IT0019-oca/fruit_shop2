@@ -24,4 +24,11 @@
   <div>
     <%= f.submit "更新" %>
   </div>
+  <div>
+    <%= f.label :status, "販売状況" %>
+    <% Product.statuses.keys.each do |status| %>
+      <%= f.radio_button :status, status %>
+      <%= status %>
+    <% end %>
+  </div>
 <% end %>

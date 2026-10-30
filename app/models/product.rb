@@ -1,4 +1,13 @@
 class Product < ApplicationRecord
+  # 関連付け（アソシエーション）の検索許可を設定
+  def self.ransackable_associations(auth_object = nil)
+    ["cart_items", "carts", "order_details", "orders", "photo_attachment", "photo_blob"]
+  end
+
+  # カラム（属性）の検索許可が未設定の場合はこちらも記載しておきます
+  def self.ransackable_attributes(auth_object = nil)
+    ["id", "name", "price", "created_at", "updated_at"]
+  end
   # バリデーション
   validates :name, presence: true, uniqueness: true  # 商品名は必須で一意
   validates :price, presence: true                   # 価格は必須
@@ -20,9 +29,13 @@ class Product < ApplicationRecord
   end
 
   # Enum（販売状況）
-# エラーの原因（旧構文）
-# app/models/product.rb
+  # エラーの原因（旧構文）
+  # app/models/product.rb
 
-# 修正後（新構文）
-enum :status, { on_sale: 0, sold_out: 1 }
+  # 修正後（新構文）
+  enum :status, { on_sale: 0, sold_out: 1 }
+ # 検索（Ransack）
+  def self.ransackable_attributes(auth_object = nil)
+    %w[name price]
+  end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_022759) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_022935) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -56,6 +56,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_022759) do
     t.index ["user_id"], name: "index_carts_on_user_id"
   end
 
+  create_table "customers", force: :cascade do |t|
+    t.integer "age"
+    t.datetime "created_at", null: false
+    t.integer "employee_id", null: false
+    t.string "name"
+    t.datetime "updated_at", null: false
+    t.index ["employee_id"], name: "index_customers_on_employee_id"
+  end
+
+  create_table "employees", force: :cascade do |t|
+    t.integer "age"
+    t.datetime "created_at", null: false
+    t.string "name"
+    t.datetime "updated_at", null: false
+  end
+
   create_table "order_details", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "order_id", null: false
@@ -80,13 +96,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_022759) do
     t.datetime "created_at", null: false
     t.text "description"
     t.string "name", null: false
-    t.integer "price", null: false
+    t.integer "price", default: 0, null: false
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
   end
 
   create_table "users", force: :cascade do |t|
-    t.boolean "admin_flg"
+    t.boolean "admin_flg", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "current_sign_in_at"
     t.string "current_sign_in_ip"
@@ -94,7 +110,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_022759) do
     t.string "encrypted_password", default: "", null: false
     t.datetime "last_sign_in_at"
     t.string "last_sign_in_ip"
-    t.string "name"
+    t.string "name", null: false
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
     t.string "reset_password_token"
@@ -109,6 +125,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_022759) do
   add_foreign_key "cart_items", "carts"
   add_foreign_key "cart_items", "products"
   add_foreign_key "carts", "users"
+  add_foreign_key "customers", "employees"
   add_foreign_key "order_details", "orders"
   add_foreign_key "order_details", "products"
   add_foreign_key "orders", "users"

@@ -1,5 +1,8 @@
+
+# frozen_string_literal: true
+
 class AddAdminFlgToUsers < ActiveRecord::Migration[8.1]
   def change
-    add_column :users, :admin_flg, :boolean
+    # admin_flgカラムはDeviseCreateUsersで作成済み
   end
 end

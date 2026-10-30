@@ -1,82 +1,71 @@
 class CartsController < ApplicationController
-  def show
-    @cart = Cart.find_by(user_id: current_user.id) 
-    user_cart_calculation
-  end
-def add_product
-    # 空のカートもしくはカートの中に商品がない場合は初期化
-    session[:cart] ||= []
-    # 商品のIDで商品を取得
-    product = Product.find(cart_params[:product_id])
-    count = cart_params[:count].to_i
-    
-    # セッションはJSON形式で保存されるため、ハッシュのキーは文字列で扱う必要があります。
-    # セッションで扱う場合はid:ではなく"id"のようにしてください。
-    # （シンボルではセッション内で正しく保存・復元できないことがあります）
+  before_action :authenticate_user! # 未ログインの場合はログイン画面へリダイレクト
 
-    # もしまだカートに商品がなければ追加
-    if session[:cart].none? { |item| item["id"] == product.id }
-      session[:cart] << { "id" => product.id, "count" => count }
-    else
-    # 既にカートに商品がある場合は数量を更新
-      item = session[:cart].find { |item| item["id"] == product.id }
-      item["count"] += count if item
-    end
-    cart_calculation
-    redirect_to carts_path, notice: '商品がカートに追加されました。'
-  end
   def index
-    # セッションからカートの情報を取得
-    if session[:cart].present?
-      # カート内の各アイテム（ハッシュ）から商品IDだけを取り出して配列にする
-      # .map は各要素に処理を施し、その結果を新しい配列として返すメソッド
-      product_ids = session[:cart].map { |item| item["id"] }
-      # 取り出したIDに該当する商品情報をまとめてデータベースから取得し、各IDをキーにしてハッシュ形式で取り出せるようにする（index_by）
-      @products = Product.where(id: product_ids).index_by(&:id)
-    end
+    # カート一覧画面（単一カートの場合は show へリダイレクト）
+    redirect_to cart_path(current_user.cart || current_user.create_cart)
+  end
+
+  def show
+    # idパラメータからカートを取得、なければログインユーザーのカートを取得
+    @cart = current_user.cart || current_user.create_cart
     
+    # カート内の商品一覧を取得
+    @cart_items = @cart.cart_items.includes(:product)
+
+    # 各商品の小計と合計金額の計算
+    @item_totals = @cart_items.map { |item| item.product.price * item.quantity }
+    @cart_total = @item_totals.sum
   end
-  
-  def update_quantity        
-    # 商品のIDを取得
-    product_id = params[:id].to_i
-    reduce_count = params[:count].to_i
 
-    # カート内の商品を見つける
-    item = session[:cart].find { |item| item["id"] == product_id }
+  def add_product
+    @cart = current_user.cart || current_user.create_cart
+    product_id = params[:product_id] || params[:id]
+    quantity = params[:quantity].to_i.positive? ? params[:quantity].to_i : 1
 
-    if item
-      # 数量を更新
-      item["count"] = reduce_count
-      # 数量が0になった場合はカートから削除
-      session[:cart].delete(item) if item["count"] <= 0
+    @cart_item = @cart.cart_items.find_by(product_id: product_id)
+
+    if @cart_item
+      @cart_item.quantity += quantity
+    else
+      @cart_item = @cart.cart_items.build(product_id: product_id, quantity: quantity)
     end
 
-    # カートの合計金額を再計算
-    cart_calculation
-
-    redirect_to carts_path, notice: '商品がカートから削除されました。'
+    if @cart_item.save
+      # ルーティングが resources :carts のため @cart を渡してリダイレクト
+      redirect_to cart_path(@cart), notice: '商品をカートに追加しました。'
+    else
+      redirect_back fallback_location: products_path, alert: 'カートへの追加に失敗しました。'
+    end
   end
 
-  # カートの商品を削除アクション
   def remove_item
+    @cart = current_user.cart
+    @cart_item = @cart.cart_items.find_by(product_id: params[:id]) || @cart.cart_items.find_by(id: params[:id])
 
-    # 商品のIDを取得
-    product_id = params[:id].to_i
-
-    # カートから該当商品を削除
-    session[:cart].delete_if { |item| item["id"] == product_id }
-    
-    # カートの合計金額を再計算
-    cart_calculation
-
-    redirect_to carts_path, notice: '商品がカートから削除されました。'
+    if @cart_item
+      @cart_item.destroy
+      redirect_to cart_path(@cart), notice: '商品をカートから削除しました。'
+    else
+      redirect_to cart_path(@cart), alert: '対象の商品が見つかりませんでした。'
+    end
   end
 
+  def update_quantity
+    @cart = current_user.cart
+    @cart_item = @cart.cart_items.find_by(product_id: params[:id]) || @cart.cart_items.find_by(id: params[:id])
 
-  private
-
-  def cart_params
-    params.permit(:product_id, :count)
+    if @cart_item
+      quantity = params[:count] || params[:quantity]
+      if quantity.to_i > 0
+        @cart_item.update(quantity: quantity)
+        redirect_to cart_path(@cart), notice: '数量を変更しました。'
+      else
+        @cart_item.destroy
+        redirect_to cart_path(@cart), notice: '商品をカートから削除しました。'
+      end
+    else
+      redirect_to cart_path(@cart), alert: '対象の商品が見つかりませんでした。'
+    end
   end
 end
